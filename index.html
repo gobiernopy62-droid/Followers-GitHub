@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Followers</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#08080f;color:#f0f0ff;font-family:'Nunito',sans-serif;width:100vw;height:100vh;overflow:hidden;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;top:0;left:0;display:none}
+canvas.vis{display:block}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.screen.off{display:none}
+
+/* ── Menu ──────────────────────────────────────────────── */
+#menu{background:radial-gradient(ellipse 80% 55% at 50% 20%,#1e0b3d 0%,transparent 65%),radial-gradient(ellipse 45% 40% at 80% 80%,#0b1a3d 0%,transparent 60%),#08080f}
+#mp{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.pt{position:absolute;border-radius:50%;animation:rise linear infinite}
+@keyframes rise{from{transform:translateY(110vh) scale(.3);opacity:0}10%{opacity:.7}85%{opacity:.35}to{transform:translateY(-10vh) scale(1);opacity:0}}
+.logo{font-family:'Fredoka One',cursive;font-size:clamp(64px,13vw,118px);background:linear-gradient(135deg,#FF3355 0%,#FF8833 42%,#FFCC00 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 44px rgba(255,55,85,.32));line-height:1;position:relative;z-index:1}
+.logo-sub{font-size:12px;letter-spacing:5px;text-transform:uppercase;color:rgba(240,240,255,.38);font-weight:700;margin-bottom:clamp(20px,4vh,42px);position:relative;z-index:1}
+.mbtn{width:min(264px,88vw);padding:clamp(11px,3.5vw,17px) 0;font-family:'Nunito',sans-serif;font-size:clamp(13px,4.2vw,17px);font-weight:800;border-radius:clamp(12px,3vw,18px);border:none;cursor:pointer;transition:transform .15s,filter .15s;letter-spacing:.4px;position:relative;z-index:1;overflow:hidden}
+.mbtn::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(255,255,255,.11),transparent);pointer-events:none}
+.mbtn:hover{transform:translateY(-3px);filter:brightness(1.1)}
+.mbtn:active{transform:translateY(0);filter:brightness(.93)}
+.mbtn+.mbtn{margin-top:clamp(8px,2vw,13px)}
+.mb-play{background:linear-gradient(135deg,#ff2060,#ff5c20);color:#fff;box-shadow:0 6px 30px rgba(255,40,96,.42)}
+.mb-cfg{background:rgba(255,255,255,.08);color:#f0f0ff;border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(12px)}
+.mb-skins{background:linear-gradient(135deg,#7b20ff,#2060ff);color:#fff;box-shadow:0 6px 30px rgba(123,32,255,.42)}
+.mb-exit{background:transparent;color:rgba(240,240,255,.42);border:1px solid rgba(255,255,255,.08)}
+.mb-exit:hover{color:rgba(240,240,255,.82);border-color:rgba(255,255,255,.2)}
+.menu-hint{position:absolute;bottom:20px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(240,240,255,.18)}
+
+/* ── Settings ──────────────────────────────────────────── */
+#settings{background:radial-gradient(ellipse 70% 50% at 50% 0%,#100820 0%,transparent 55%),rgba(8,8,15,0.88);backdrop-filter:blur(18px)}
+.cfg-card{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:28px;padding:clamp(24px,5vw,44px);width:min(520px,92vw);backdrop-filter:blur(20px);box-shadow:0 24px 80px rgba(0,0,0,.55);max-height:calc(100vh - 48px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.cfg-t{font-family:'Fredoka One',cursive;font-size:30px;text-align:center;margin-bottom:36px}
+.cfg-lbl{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(240,240,255,.42);font-weight:700;margin-bottom:10px}
+.cfg-input{width:100%;padding:13px 18px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:14px;color:#f0f0ff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;outline:none;transition:border-color .2s;margin-bottom:28px}
+.cfg-input:focus{border-color:rgba(255,40,120,.7)}
+
+/* Color grid: 3 columns × 2 rows to fit 6 colors */
+.clr-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.csw{aspect-ratio:1;border-radius:18px;border:3px solid transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:900;color:rgba(0,0,0,.6);transition:transform .15s,border-color .15s,box-shadow .15s;text-transform:uppercase;letter-spacing:.5px}
+.csw:hover{transform:scale(1.05)}
+.csw.on{border-color:rgba(255,255,255,.92);box-shadow:0 0 0 3px rgba(255,255,255,.18),0 8px 24px rgba(0,0,0,.42);transform:scale(1.08)}
+.c-red{background:#FF3355}.c-blue{background:#33AAFF}.c-green{background:#33EE66}
+.c-yellow{background:#FFCC00}.c-purple{background:#9933FF}.c-pink{background:#FF33AA}
+.cfg-btns{display:flex;gap:12px}
+.btn-back{padding:14px 22px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:14px;color:#f0f0ff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-back:hover{background:rgba(255,255,255,.13)}
+.btn-save{flex:1;padding:14px;background:linear-gradient(135deg,#ff2060,#7b20ff);border:none;border-radius:14px;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(255,40,96,.36);transition:filter .15s}
+.btn-save:hover{filter:brightness(1.1)}
+
+/* ── Audio toggles ─────────────────────────────────────── */
+.cfg-audio-section{margin-bottom:28px}
+.cfg-toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cfg-toggle-row:last-child{margin-bottom:0}
+.cfg-toggle-label{font-size:14px;font-weight:700;color:rgba(240,240,255,.78)}
+.toggle-switch{position:relative;display:inline-block;width:50px;height:27px;flex-shrink:0;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:14px;border:1.5px solid rgba(255,255,255,.15);transition:background .22s,border-color .22s;pointer-events:none}
+.toggle-switch input:checked+.toggle-track{background:linear-gradient(135deg,#ff2060,#7b20ff);border-color:transparent}
+.toggle-thumb{position:absolute;width:21px;height:21px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .22s;box-shadow:0 2px 6px rgba(0,0,0,.45);pointer-events:none}
+.toggle-switch input:checked~.toggle-thumb{transform:translateX(23px)}
+
+/* ── Language selector (settings) ─────────────────────── */
+.cfg-lang-section{margin-bottom:28px}
+.lang-row{display:flex;gap:10px}
+.lang-btn{flex:1;padding:11px 0;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:12px;color:rgba(240,240,255,.65);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .18s;letter-spacing:.4px;display:flex;align-items:center;justify-content:center;gap:6px}
+.lang-btn:hover{background:rgba(255,255,255,.13);color:#f0f0ff}
+.lang-btn.active{background:linear-gradient(135deg,#ff2060,#7b20ff);border-color:transparent;color:#fff;box-shadow:0 4px 18px rgba(123,32,255,.42)}
+.lang-flag{font-size:18px;line-height:1}
+
+/* ── Skins screen ──────────────────────────────────────── */
+#skins{background:radial-gradient(ellipse 70% 50% at 50% 0%,#0d0a20 0%,transparent 55%),#08080f;align-items:stretch;justify-content:flex-start;padding:0}
+.sk-header{display:flex;align-items:center;padding:22px 28px 14px;flex-shrink:0;gap:16px}
+.sk-back-btn{padding:10px 18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f0f0ff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;flex-shrink:0}
+.sk-back-btn:hover{background:rgba(255,255,255,.14)}
+.sk-header-title{font-family:'Fredoka One',cursive;font-size:30px;background:linear-gradient(135deg,#a855ff,#4488ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sk-coin-badge{display:flex;align-items:center;gap:7px;margin-left:auto;background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.28);border-radius:20px;padding:7px 16px;font-family:'Fredoka One',cursive;font-size:20px;color:#FFCC00;flex-shrink:0}
+.sk-coin-badge-img{width:22px;height:22px;object-fit:contain}
+.sk-layout{display:flex;flex:1;min-height:0;padding:0 28px 24px;gap:24px}
+.sk-left{width:48%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;flex-shrink:0}
+.sk-preview-label{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:rgba(240,240,255,.35);font-weight:700}
+.sk-preview-wrap{position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sk-char-glow{position:absolute;inset:-10px;border-radius:50%;opacity:.55;pointer-events:none;transition:background .4s}
+.sk-char-stack{position:relative;width:176px;height:176px}
+.sk-char-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+/* sk-skin-overlay: sizing applied dynamically in JS based on aspect ratio */
+.sk-skin-overlay{position:absolute;bottom:0;left:0;width:100%;height:auto;z-index:2}
+.sk-player-name{font-family:'Fredoka One',cursive;font-size:22px;color:#f0f0ff;letter-spacing:.5px}
+.sk-right{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0;overflow:hidden}
+.sk-section-label{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:rgba(240,240,255,.35);font-weight:700;flex-shrink:0;padding-top:2px}
+.sk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;padding-right:2px;align-content:start}
+.sk-grid::-webkit-scrollbar{width:4px}
+.sk-grid::-webkit-scrollbar-track{background:transparent}
+.sk-grid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:2px}
+.sk-card{background:rgba(255,255,255,.055);border:2px solid rgba(255,255,255,.08);border-radius:16px;padding:10px 6px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .15s,border-color .15s,background .15s,box-shadow .15s}
+.sk-card:hover{transform:translateY(-3px);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22)}
+.sk-card.sk-selected{border-color:#a855ff;background:rgba(168,85,255,.12);box-shadow:0 0 18px rgba(168,85,255,.28)}
+.sk-card.sk-locked{opacity:.82;cursor:default}
+.sk-card.sk-locked:hover{transform:none;background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.08)}
+.sk-card.sk-cant-afford{opacity:.5}
+.sk-card-img-wrap{position:relative;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:visible;flex-shrink:0}
+.sk-card-img{width:100%;height:100%;object-fit:contain;border-radius:50%;overflow:hidden}
+.sk-card-empty{font-size:26px;color:rgba(240,240,255,.25)}
+.sk-lock-icon{position:absolute;bottom:-6px;right:-6px;font-size:15px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))}
+.sk-card-name{font-size:10px;font-weight:900;color:rgba(240,240,255,.62);text-align:center;line-height:1.3;letter-spacing:.2px}
+.sk-card.sk-selected .sk-card-name{color:#c084fc}
+.sk-card-price{display:flex;align-items:center;gap:3px;font-family:'Fredoka One',cursive;font-size:12px;color:#FFCC00;line-height:1}
+.sk-cant-afford .sk-card-price{color:rgba(255,204,0,.38)}
+.sk-price-coin{width:13px;height:13px;object-fit:contain;vertical-align:middle}
+.sk-buy-btn{width:100%;padding:4px 0;background:linear-gradient(135deg,#FFCC00,#FF8833);border:none;border-radius:8px;color:#3a2000;font-family:'Nunito',sans-serif;font-size:10px;font-weight:900;cursor:pointer;transition:filter .15s;pointer-events:all;letter-spacing:.2px}
+.sk-buy-btn:hover{filter:brightness(1.1)}
+.sk-desc-card{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:20px 22px;flex-shrink:0}
+.sk-desc-name{font-family:'Fredoka One',cursive;font-size:20px;color:#f0f0ff;margin-bottom:8px}
+.sk-desc-text{font-size:13px;color:rgba(240,240,255,.52);line-height:1.65}
+.sk-desc-price{font-size:13px;color:#FFCC00;font-weight:700;margin-top:10px;display:flex;align-items:center;gap:5px}
+
+/* ── HUD ───────────────────────────────────────────────── */
+#hud{position:fixed;inset:0;pointer-events:none;display:none}
+#hud.vis{display:block}
+.h-tl{position:absolute;top:18px;left:18px;display:flex;align-items:center;gap:10px}
+.h-exit-btn{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.62);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.65);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;flex-shrink:0;pointer-events:all;font-family:'Nunito',sans-serif}
+.h-exit-btn:hover{background:rgba(220,30,55,.65);color:#fff;border-color:rgba(255,40,60,.35)}
+.h-rnd{background:rgba(0,0,0,.62);backdrop-filter:blur(10px);border-radius:24px;padding:7px 16px;font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.08)}
+/* ── Pause overlay ─────────────────────────────────────────── */
+#pause-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:200}
+#pause-overlay.off{display:none}
+.pause-card{background:rgba(18,18,30,.95);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:52px 60px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.7)}
+.pause-title{font-family:'Fredoka One',cursive;font-size:28px;color:#f0f0ff;margin-bottom:36px}
+.pause-btns{display:flex;gap:16px;justify-content:center}
+.pause-yes{padding:13px 40px;background:linear-gradient(135deg,#ff2060,#ff5c20);border:none;border-radius:14px;color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(255,40,96,.42);transition:filter .15s}
+.pause-yes:hover{filter:brightness(1.12)}
+.pause-no{padding:13px 40px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:14px;color:#f0f0ff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:background .15s}
+.pause-no:hover{background:rgba(255,255,255,.17)}
+.h-tmr{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-family:'Fredoka One',cursive;font-size:64px;color:#fff;text-shadow:0 0 32px rgba(255,255,255,.38),0 2px 8px rgba(0,0,0,.85);min-width:96px;text-align:center;line-height:1}
+.h-tmr.urgent{color:#FF3355;text-shadow:0 0 32px rgba(255,51,85,.65),0 2px 8px rgba(0,0,0,.85);animation:tpulse .48s infinite alternate}
+@keyframes tpulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.1)}}
+/* Scoreboard: max-height para que no desborde en pantallas pequeñas con 6 jugadores */
+.h-sc{position:absolute;top:18px;right:18px;display:flex;flex-direction:column;gap:5px;max-height:calc(100vh - 120px);overflow-y:auto}
+.h-sc::-webkit-scrollbar{display:none}
+.h-si{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.62);backdrop-filter:blur(10px);border-radius:24px;padding:6px 12px;font-size:12px;font-weight:800;border:1px solid rgba(255,255,255,.06)}
+.h-si.elim{opacity:.34;text-decoration:line-through}
+.h-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid rgba(255,255,255,.3)}
+.h-cnt{color:rgba(255,255,255,.5);margin-left:2px;font-family:'Fredoka One',cursive;font-size:14px}
+.h-spec{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);border-radius:32px;padding:12px 28px;font-size:13px;font-weight:700;white-space:nowrap;pointer-events:none}
+
+/* ── Round end ─────────────────────────────────────────── */
+#rend{background:rgba(8,8,15,.88);backdrop-filter:blur(24px)}
+.re-card{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:28px;padding:clamp(24px,5vw,48px);width:min(480px,92vw);text-align:center;box-shadow:0 32px 100px rgba(0,0,0,.6);max-height:94vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.re-t{font-family:'Fredoka One',cursive;font-size:36px;margin-bottom:6px}
+.re-sub{font-size:13px;color:rgba(240,240,255,.5);margin-bottom:28px;line-height:1.6}
+.re-list{display:flex;flex-direction:column;gap:9px;margin-bottom:28px}
+.re-row{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.055);padding:11px 16px;border-radius:14px;border:1px solid transparent}
+.re-row.elim{background:rgba(255,51,85,.07);border-color:rgba(255,51,85,.24);opacity:.55}
+.re-rank{font-family:'Fredoka One',cursive;font-size:18px;width:24px;text-align:center;color:rgba(240,240,255,.45)}
+.re-cd{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.re-nm{flex:1;font-weight:700;text-align:left;font-size:14px}
+.re-cn{font-family:'Fredoka One',cursive;font-size:16px;color:rgba(240,240,255,.6)}
+.re-tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:900;letter-spacing:1px;margin-left:4px;background:rgba(255,51,85,.25);color:#FF3355}
+.re-btn{width:100%;padding:15px;background:linear-gradient(135deg,#ff2060,#7b20ff);border:none;border-radius:14px;color:#fff;font-family:'Nunito',sans-serif;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 6px 28px rgba(123,32,255,.42);transition:filter .15s;pointer-events:all}
+.re-btn:hover{filter:brightness(1.1)}
+
+/* ── Game over ─────────────────────────────────────────── */
+#gover{background:rgba(8,8,15,.94);backdrop-filter:blur(28px);cursor:pointer}
+.go-card{text-align:center;width:min(440px,92vw)}
+.go-trophy{font-size:88px;margin-bottom:12px;filter:drop-shadow(0 0 40px rgba(255,204,0,.52));animation:tbounce 1.4s ease infinite alternate}
+@keyframes tbounce{from{transform:scale(1) rotate(-5deg)}to{transform:scale(1.1) rotate(5deg)}}
+.go-lbl{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:rgba(240,240,255,.38);font-weight:700;margin-bottom:6px}
+.go-win{font-family:'Fredoka One',cursive;font-size:56px;line-height:1;margin-bottom:6px}
+.go-det{font-size:14px;color:rgba(240,240,255,.48);margin-bottom:28px}
+.go-hint{font-size:13px;color:rgba(240,240,255,.42);letter-spacing:.4px;animation:hintpulse 1.7s ease-in-out infinite alternate}
+@keyframes hintpulse{from{opacity:.3}to{opacity:.75}}
+.go-coins-title{font-family:'Fredoka One',cursive;font-size:26px;color:#FFCC00;margin-bottom:22px;filter:drop-shadow(0 0 14px rgba(255,204,0,.4))}
+.go-coins-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:10px}
+.go-coin-img{width:62px;height:62px;object-fit:contain;filter:drop-shadow(0 0 16px rgba(255,204,0,.65));animation:coinspin 1.6s ease-in-out infinite alternate}
+@keyframes coinspin{from{transform:scale(1)}to{transform:scale(1.12) rotate(8deg)}}
+.go-coins-earned{font-family:'Fredoka One',cursive;font-size:72px;color:#FFCC00;line-height:1;filter:drop-shadow(0 0 24px rgba(255,204,0,.6))}
+.go-coins-total{font-size:13px;color:rgba(240,240,255,.44);margin-bottom:40px;letter-spacing:.3px}
+.go-acts{display:flex;flex-direction:column;gap:12px}
+.go-play{padding:16px;background:linear-gradient(135deg,#ff2060,#ff5c20);border:none;border-radius:16px;color:#fff;font-family:'Nunito',sans-serif;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 8px 28px rgba(255,40,96,.46);transition:filter .15s;pointer-events:all}
+.go-play:hover{filter:brightness(1.1)}
+.go-mn{padding:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:16px;color:#f0f0ff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;pointer-events:all}
+.go-mn:hover{background:rgba(255,255,255,.13)}
+
+/* ── Exit ──────────────────────────────────────────────── */
+#exitsc{background:rgba(8,8,15,0.88);backdrop-filter:blur(18px)}
+.ex-msg{font-family:'Fredoka One',cursive;font-size:52px;color:rgba(240,240,255,.38);margin-bottom:12px}
+.ex-sub{font-size:15px;color:rgba(240,240,255,.28);margin-bottom:32px}
+.ex-back{padding:14px 32px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:16px;color:#f0f0ff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
+.ex-back:hover{background:rgba(255,255,255,.13)}
+
+/* ── Mobile controls ───────────────────────────────────── */
+#mobile-controls{position:fixed;inset:0;pointer-events:none;display:none;z-index:50}
+#mobile-controls.vis{display:block}
+#joystick-zone{position:absolute;bottom:30px;left:24px;width:130px;height:130px;pointer-events:all}
+#joystick-base{position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);backdrop-filter:blur(6px)}
+#joystick-knob{position:absolute;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.32);border:2px solid rgba(255,255,255,.55);top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#joystick-knob.active{background:rgba(255,255,255,.52)}
+#shoot-btn{position:absolute;bottom:42px;right:28px;width:82px;height:82px;border-radius:50%;background:linear-gradient(135deg,rgba(255,40,96,.55),rgba(123,32,255,.55));border:2px solid rgba(255,100,150,.45);backdrop-filter:blur(8px);pointer-events:all;display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 6px 24px rgba(255,40,96,.35);transition:transform .08s,background .08s;cursor:pointer;user-select:none;-webkit-user-select:none}
+#shoot-btn.firing{transform:scale(.88);background:linear-gradient(135deg,rgba(255,40,96,.85),rgba(123,32,255,.85))}
+#shoot-btn.disabled{opacity:.28}
+/* ── Loading screen ─────────────────────────────────────── */
+#loading{background:#000;z-index:1000;gap:28px}
+.ld-spinner{width:56px;height:56px;border:4px solid rgba(255,255,255,.14);border-top-color:#fff;border-radius:50%;animation:ld-spin .75s linear infinite;flex-shrink:0}
+@keyframes ld-spin{to{transform:rotate(360deg)}}
+.ld-prompt{font-family:'Fredoka One',cursive;font-size:clamp(16px,4vw,22px);color:rgba(255,255,255,.82);letter-spacing:.6px;text-align:center;padding:0 28px;animation:hintpulse 1.7s ease-in-out infinite alternate}
+</style>
+</head>
+<body>
+
+<canvas id="gc"></canvas>
+
+<!-- ── Loading ───────────────────────────────────────────── -->
+<div id="loading" class="screen">
+  <div id="ld-spinner" class="ld-spinner"></div>
+  <div id="ld-prompt"  class="ld-prompt"   style="display:none"></div>
+</div>
+
+<!-- ── Menu ──────────────────────────────────────────────── -->
+<div id="menu" class="screen">
+  <div id="mp"></div>
+  <div class="logo">Followers</div>
+  <div class="logo-sub" data-i18n="logo_sub">The followers game</div>
+  <button class="mbtn mb-play"  onclick="FAudio.playSfx('click'); G.start()"   data-i18n="menu_play">&#9654;&nbsp; Play</button>
+  <button class="mbtn mb-cfg"   onclick="FAudio.playSfx('click'); G.goCfg()"   data-i18n="menu_settings">&#9881;&nbsp; Settings</button>
+  <button class="mbtn mb-skins" onclick="FAudio.playSfx('click'); G.goSkins()" data-i18n="menu_skins">&#10022;&nbsp; Outfits</button>
+  <button class="mbtn mb-exit"  onclick="FAudio.playSfx('click'); G.goExit()"  data-i18n="menu_exit">&#10005;&nbsp; Exit</button>
+  <div class="menu-hint" data-i18n="menu_hint">WASD / Arrows to move &nbsp;&middot;&nbsp; SHIFT = Shuriken &nbsp;&middot;&nbsp; Mouse = Aim &nbsp;&middot;&nbsp; ESC = Menu</div>
+</div>
+
+<!-- ── Settings ──────────────────────────────────────────── -->
+<div id="settings" class="screen off">
+  <div class="cfg-card">
+    <div class="cfg-t" data-i18n="settings_title">&#9881; Settings</div>
+
+    <div class="cfg-lbl" data-i18n="settings_nametag">Your Nametag</div>
+    <input id="cname" class="cfg-input" maxlength="20" value="Influencer #1"
+           data-i18n-ph="name_placeholder" placeholder="Your name...">
+
+    <div class="cfg-lbl" data-i18n="settings_color">Skin Color</div>
+    <div class="clr-row">
+      <div class="csw c-red"    data-c="red"    onclick="FAudio.playSfx('click'); G.pickClr('red')">
+        <span style="font-size:22px">🔴</span><span data-i18n="color_red">Red</span>
+      </div>
+      <div class="csw c-blue"   data-c="blue"   onclick="FAudio.playSfx('click'); G.pickClr('blue')">
+        <span style="font-size:22px">🔵</span><span data-i18n="color_blue">Blue</span>
+      </div>
+      <div class="csw c-green"  data-c="green"  onclick="FAudio.playSfx('click'); G.pickClr('green')">
+        <span style="font-size:22px">🟢</span><span data-i18n="color_green">Green</span>
+      </div>
+      <div class="csw c-yellow" data-c="yellow" onclick="FAudio.playSfx('click'); G.pickClr('yellow')">
+        <span style="font-size:22px">🟡</span><span data-i18n="color_yellow">Yellow</span>
+      </div>
+      <div class="csw c-purple" data-c="purple" onclick="FAudio.playSfx('click'); G.pickClr('purple')">
+        <span style="font-size:22px">🟣</span><span data-i18n="color_purple">Purple</span>
+      </div>
+      <div class="csw c-pink"   data-c="pink"   onclick="FAudio.playSfx('click'); G.pickClr('pink')">
+        <span style="font-size:22px">🩷</span><span data-i18n="color_pink">Pink</span>
+      </div>
+    </div>
+
+    <div class="cfg-lbl" data-i18n="settings_audio">Audio</div>
+    <div class="cfg-audio-section">
+      <div class="cfg-toggle-row">
+        <span class="cfg-toggle-label" data-i18n="settings_music">&#127925; Music</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-music" checked onchange="FAudio.setMusicEnabled(this.checked)">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+      <div class="cfg-toggle-row">
+        <span class="cfg-toggle-label" data-i18n="settings_sfx">&#128266; Sound Effects</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-sfx" checked onchange="FAudio.setSfxEnabled(this.checked)">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="cfg-lbl" data-i18n="settings_lang">&#127758; Language</div>
+    <div class="cfg-lang-section">
+      <div class="lang-row">
+        <button class="lang-btn active" id="lang-en" onclick="FAudio.playSfx('click'); FLang.setLang('en')">
+          <span class="lang-flag">🇺🇸</span> EN
+        </button>
+        <button class="lang-btn" id="lang-es" onclick="FAudio.playSfx('click'); FLang.setLang('es')">
+          <span class="lang-flag">🇪🇸</span> ES
+        </button>
+        <button class="lang-btn" id="lang-pt" onclick="FAudio.playSfx('click'); FLang.setLang('pt')">
+          <span class="lang-flag">🇧🇷</span> PT
+        </button>
+      </div>
+    </div>
+
+    <div class="cfg-btns">
+      <button class="btn-back" onclick="FAudio.playSfx('click'); G.goMenu()" data-i18n="settings_back">&#8592; Back</button>
+      <button class="btn-save" onclick="FAudio.playSfx('click'); G.saveCfg()" data-i18n="settings_save">Done &#10003;</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Skins ──────────────────────────────────────────────── -->
+<div id="skins" class="screen off">
+  <div class="sk-header">
+    <button class="sk-back-btn" onclick="FAudio.playSfx('click'); G.goMenu()" data-i18n="skins_back">&#8592; Back</button>
+    <div class="sk-header-title" data-i18n="skins_title">&#10022; Outfits</div>
+    <div class="sk-coin-badge">
+      <img src="Assets/Moneda.png" class="sk-coin-badge-img" alt="Coin">
+      <span id="sk-coin-count">0</span>
+    </div>
+  </div>
+  <div class="sk-layout">
+
+    <!-- Left: character preview -->
+    <div class="sk-left">
+      <div class="sk-preview-label" data-i18n="skins_preview">Preview</div>
+      <div class="sk-preview-wrap">
+        <div class="sk-char-glow" id="sk-glow"></div>
+        <div class="sk-char-stack">
+          <img id="sk-char-img"     class="sk-char-img"     src="" alt="">
+          <img id="sk-skin-overlay" class="sk-skin-overlay" src="" alt="" style="display:none">
+        </div>
+      </div>
+      <div class="sk-player-name" id="sk-player-name"></div>
+    </div>
+
+    <!-- Right: skin grid + description -->
+    <div class="sk-right">
+      <div class="sk-section-label" data-i18n="skins_choose">Choose your outfit</div>
+      <div class="sk-grid" id="sk-grid"></div>
+      <div class="sk-desc-card">
+        <div class="sk-desc-name" id="sk-desc-name">None</div>
+        <div class="sk-desc-text" id="sk-desc-text"></div>
+        <div class="sk-desc-price" id="sk-desc-price" style="display:none"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── HUD ───────────────────────────────────────────────── -->
+<div id="hud">
+  <div class="h-tl">
+    <button class="h-exit-btn" onclick="G.pauseGame()">&#10005;</button>
+    <div class="h-rnd" id="hrnd">Round 1 of 3</div>
+  </div>
+  <div class="h-tmr" id="htmr">30</div>
+  <div class="h-sc"  id="hsc"></div>
+  <div class="h-spec" id="hspec" style="display:none" data-i18n="hud_spectator">
+    &#128123; Spectator Mode &nbsp;&#183;&nbsp; WASD = move camera &nbsp;&#183;&nbsp; ESC = exit to menu
+  </div>
+</div>
+
+<!-- ── Mobile Controls ───────────────────────────────────── -->
+<div id="mobile-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base"></div>
+    <div id="joystick-knob"></div>
+  </div>
+  <div id="shoot-btn">&#10022;</div>
+</div>
+
+<!-- ── Round End ─────────────────────────────────────────── -->
+<div id="rend" class="screen off">
+  <div class="re-card">
+    <div class="re-t"    id="ret">Round End!</div>
+    <div class="re-sub"  id="resub"></div>
+    <div class="re-list" id="relist"></div>
+    <button class="re-btn" id="rebtn">Continue &#8594;</button>
+  </div>
+</div>
+
+<!-- ── Game Over ─────────────────────────────────────────── -->
+<div id="gover" class="screen off">
+  <div class="go-card">
+
+    <!-- Step 1: show winner, wait for input -->
+    <div id="go-step1">
+      <div class="go-trophy">&#127942;</div>
+      <div class="go-lbl" data-i18n="gover_winner_lbl">&#127942; WINNER!</div>
+      <div class="go-win" id="gowin">-</div>
+      <div class="go-det" id="godet"></div>
+      <div class="go-hint" data-i18n="gover_hint">Press the screen or Space to continue.</div>
+    </div>
+
+    <!-- Step 2: show coins earned + action buttons -->
+    <div id="go-step2" style="display:none">
+      <div class="go-coins-title" data-i18n="gover_coins_title">&#127881; Coins earned!</div>
+      <div class="go-coins-row">
+        <img src="Assets/Moneda.png" class="go-coin-img" alt="Coin">
+        <span class="go-coins-earned" id="go-coins-earned">+0</span>
+      </div>
+      <div class="go-coins-total" id="go-coins-total">Total accumulated: 0 &#129689;</div>
+      <div class="go-acts">
+        <button class="go-play" onclick="FAudio.playSfx('click'); G.start()"   data-i18n="gover_play_again">&#9654; Play again</button>
+        <button class="go-mn"   onclick="FAudio.playSfx('click'); G.goMenu()"  data-i18n="gover_main_menu">&#8592; Main menu</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Exit ──────────────────────────────────────────────── -->
+<div id="exitsc" class="screen off">
+  <div class="ex-msg" data-i18n="exit_msg">Goodbye! &#128075;</div>
+  <div class="ex-sub" data-i18n="exit_sub">Thanks for playing Followers</div>
+  <button class="ex-back" onclick="FAudio.playSfx('click'); G.goMenu()" data-i18n="exit_back">&#8592; Back to menu</button>
+</div>
+
+<!-- ── Pause Overlay ──────────────────────────────────────── -->
+<div id="pause-overlay" class="off">
+  <div class="pause-card">
+    <div class="pause-title" data-i18n="pause_title">Are you sure you want to exit?</div>
+    <div class="pause-btns">
+      <button class="pause-yes" onclick="G.confirmExit()" data-i18n="pause_yes">Yes</button>
+      <button class="pause-no"  onclick="G.resumeGame()"  data-i18n="pause_no">No</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts: lang.js must be first so all modules can reference FLang -->
+<script defer src="lang.js"></script>
+<script defer src="config.js"></script>
+<script defer src="player.js"></script>
+<script defer src="bot.js"></script>
+<script defer src="powerups.js"></script>
+<script defer src="skins.js"></script>
+<script defer src="render.js"></script>
+<script defer src="audio.js"></script>
+<script defer src="game.js"></script>
+
+</body>
+</html>
